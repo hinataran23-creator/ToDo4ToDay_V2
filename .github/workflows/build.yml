@@ -18,7 +18,7 @@ jobs:
       - name: Extract project ZIP
         run: |
           mkdir app
-          unzip -o ToDo4ToDay_version_1.1.zip -d app
+          unzip -o source.zip -d app
 
       - name: Set up Java
         uses: actions/setup-java@v4
