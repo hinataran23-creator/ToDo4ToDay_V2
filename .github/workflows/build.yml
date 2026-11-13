@@ -101,6 +101,45 @@ jobs:
         working-directory: app
         run: flutter create . --platforms=android
 
+       
+      - name: Configure Android notifications
+        working-directory: app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          content = path.read_text()
+
+          permission = '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>'
+
+          if "android.permission.RECEIVE_BOOT_COMPLETED" not in content:
+              content = content.replace("<application", permission + "\n    <application", 1)
+
+          receivers = """
+                  <receiver
+                      android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+
+                  <receiver
+                      android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                      <intent-filter>
+                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                          <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                      </intent-filter>
+                  </receiver>
+          """
+
+          if "ScheduledNotificationReceiver" not in content:
+              content = content.replace("</application>", receivers + "\n    </application>", 1)
+
+          path.write_text(content)
+          print("Android notification receivers configured")
+          PY
+
+
       - name: Enable core library desugaring
         working-directory: app
         run: |
@@ -149,6 +188,10 @@ jobs:
       - name: Install dependencies
         working-directory: app
         run: flutter pub get
+
+      - name: Generate application icon
+        working-directory: app
+        run: dart run flutter_launcher_icons
 
       - name: Build APK
         working-directory: app
