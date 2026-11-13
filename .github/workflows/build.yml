@@ -20,6 +20,30 @@ jobs:
           mkdir app
           unzip -o source.zip -d app
 
+       
+      - name: Fix notification scheduling parameter
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/lib/main.dart")
+          source = path.read_text()
+
+          target = "await notifications.zonedSchedule("
+          if target not in source:
+              raise SystemExit("zonedSchedule call not found")
+
+          if "uiLocalNotificationDateInterpretation:" not in source:
+              source = source.replace(
+                  target,
+                  target + "\n    uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,",
+                  1
+              )
+
+          path.write_text(source)
+          print("Notification scheduling parameter added")
+          PY
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
