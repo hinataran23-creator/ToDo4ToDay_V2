@@ -21,6 +21,48 @@ jobs:
           unzip -o source.zip -d app
 
        
+      - name: Make app startup resilient
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/lib/main.dart")
+          source = path.read_text()
+
+          start = source.index("Future<void> main() async {")
+          end = source.index("\nconst brown", start)
+
+          replacement = """Future<void> main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+
+            try {
+              tzdata.initializeTimeZones();
+              tz.setLocalLocation(tz.getLocation('Africa/Antananarivo'));
+
+              const init = InitializationSettings(
+                android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+              );
+
+              await notifications.initialize(init);
+
+              await notifications
+                  .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+                  ?.requestNotificationsPermission();
+            } catch (e, stack) {
+              debugPrint('Notification initialization failed: $e');
+              debugPrintStack(stackTrace: stack);
+            }
+
+            runApp(const ToDo4ToDayApp());
+          }
+          """
+
+          path.write_text(source[:start] + replacement + source[end:])
+          print("Startup protection applied")
+          PY
+
+
+       
       - name: Fix notification scheduling parameter
         run: |
           python3 - <<'PY'
